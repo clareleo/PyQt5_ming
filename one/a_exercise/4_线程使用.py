@@ -26,7 +26,7 @@ class MyWin(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        self.ui = uic.loadUi("../a_ui/three_ui.ui")
+        self.ui = uic.loadUi("../a_ui/3_ui.ui")
         self.ui.setWindowIcon(QIcon("06_icon.png"))
         self.ui.setWindowTitle("four")
         login_btn = self.ui.login # 获取登录按钮

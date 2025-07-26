@@ -12,7 +12,7 @@ class MyWindow(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        self.ui = uic.loadUi("../a_ui/three_ui.ui")
+        self.ui = uic.loadUi("../a_ui/3_ui.ui")
         self.ui.setWindowIcon(QIcon("06_icon.png"))
         self.ui.setWindowTitle("three")
         """print(self.ui)  # .ui文件中最顶层对象
