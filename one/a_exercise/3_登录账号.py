@@ -43,7 +43,7 @@ class MyWindow(QWidget):
             time.sleep(0.5)
             sys.stdout.flush()
             if i == 4:
-                print("")
+                print()
 
         if username == "admin" and password == "123456":
             print("%s 登录了账号" % username)
