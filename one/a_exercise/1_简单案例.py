@@ -16,7 +16,7 @@ class MyWindow(QWidget):
 
     def init_ui(self):
         self.resize(500, 200)
-        self.setWindowTitle("练习1：模拟发送网络测试")
+        self.setWindowTitle("简单案例")
         self.setWindowIcon(QIcon('../06_icon.png'))
 
         # 主布局

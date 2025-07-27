@@ -28,7 +28,7 @@ class MyWin(QWidget):
     def init_ui(self):
         self.ui = uic.loadUi("../a_ui/3_ui.ui")
         self.ui.setWindowIcon(QIcon("06_icon.png"))
-        self.ui.setWindowTitle("four")
+        self.ui.setWindowTitle("线程使用")
         login_btn = self.ui.login # 获取登录按钮
         forget_btn = self.ui.pushButton_2 # 获取忘记密码按钮
         # 给登录按钮绑定槽函数

@@ -14,7 +14,7 @@ class MyWindow(QWidget):
     def init_ui(self):
         self.ui = uic.loadUi("../a_ui/3_ui.ui")
         self.ui.setWindowIcon(QIcon("06_icon.png"))
-        self.ui.setWindowTitle("three")
+        self.ui.setWindowTitle("登录账号")
         """print(self.ui)  # .ui文件中最顶层对象
         print(self.ui.__dict__) # 获取所有属性
         print(self.ui.label) # 获取标签
