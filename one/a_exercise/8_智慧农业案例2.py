@@ -17,7 +17,7 @@ class AgricultureMonitorUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("智慧农业监测系统")
-        self.setFixedSize(1200, 800) # 设置大小
+        self.setGeometry(100, 100, 1200, 800) # 设置大小
         self.setStyleSheet("""
                 QMainWindow {
                     background-color: rgba(0, 28, 100, 100%);  /* 深蓝色 */
