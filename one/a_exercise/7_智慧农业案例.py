@@ -8,7 +8,7 @@ import time
 
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QPushButton, QGroupBox,
-                             QComboBox, QFrame, QLCDNumber)
+                             QComboBox, QFrame, QLCDNumber, QGraphicsDropShadowEffect)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QColor, QPalette, QIcon
 
@@ -47,6 +47,7 @@ class AgricultureMonitorUI(QMainWindow):
             background-color: rgba(255, 255, 255, 65%);  /* 65%不透明度的白色背景 */
             border-radius: 12px;
             padding: 0px;
+            border: 1px solid #dee2e6;
         """)
 
         # 创建水平布局
@@ -166,6 +167,7 @@ class AgricultureMonitorUI(QMainWindow):
                     border: 1px solid #dee2e6;
                     border-radius: 12px;
                     padding: 8px;
+                    
                 """)
         upper_title.setAlignment(Qt.AlignCenter)
         central_layout.addWidget(upper_title)
@@ -282,6 +284,7 @@ class AgricultureMonitorUI(QMainWindow):
         current_time = datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
         if self.time_label:
             self.time_label.setText(current_time)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
