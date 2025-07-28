@@ -1,6 +1,5 @@
 """
-我看了下，比赛不提供 designer 辅助画图，所以老老实实敲代码画图吧
-这是个简单的案例
+中间视频播放，但是有点 bug
 """
 import json
 import sys
@@ -158,7 +157,12 @@ class AgricultureMonitorUI(QMainWindow):
         central_layout = QVBoxLayout()
         central_layout.setContentsMargins(15, 15, 15, 15)
         central_layout.setSpacing(10)
+
+        # 设置上下区域的空间比例为 65:35
+        central_layout.setStretch(0, 65)  # 上方区域占65%
+        central_layout.setStretch(1, 35)  # 下方区域占35%
         # 中央内容区域 -- 结束
+
         # 在外层垂直布局上添加标题标签
         upper_title = QLabel("环境总览数据")
         upper_title.setStyleSheet("""
@@ -174,11 +178,10 @@ class AgricultureMonitorUI(QMainWindow):
         upper_title.setAlignment(Qt.AlignCenter)
         central_layout.addWidget(upper_title)
         # 标题标签 -- 结束
-
-        # 上方大矩形区域 (占50%空间)
+        # 上方大矩形区域 (占65%空间)
         upper_frame = QFrame()
         upper_frame.setStyleSheet("""
-                    background-color: white;
+                    background-color: rgba(255, 255, 255, 65%);
                     border: 1px solid #dee2e6;
                     border-radius: 12px;
                 """)
@@ -186,41 +189,118 @@ class AgricultureMonitorUI(QMainWindow):
         upper_layout = QVBoxLayout()
         upper_layout.setContentsMargins(10, 10, 10, 10)
 
+        # 创建视频容器框架
+        video_frame = QFrame()
+        video_frame.setStyleSheet("""
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 5px;
+        """)
+        # 移除固定高度，使用拉伸因子来控制大小
+        video_layout = QVBoxLayout()
+        video_layout.setContentsMargins(5, 5, 5, 5)
+        video_layout.setSpacing(5)
+
         # 添加视频播放组件
         self.video_widget = QVideoWidget()
-        self.video_widget.setStyleSheet("background-color: black; border-radius: 8px;")
-        upper_layout.addWidget(self.video_widget)
+        # 为视频控件添加阴影效果
+        video_shadow = QGraphicsDropShadowEffect()
+        video_shadow.setBlurRadius(10)
+        video_shadow.setXOffset(0)
+        video_shadow.setYOffset(2)
+        video_shadow.setColor(QColor(0, 0, 0, 50))
+        self.video_widget.setGraphicsEffect(video_shadow)
 
-        # 创建媒体播放器
+        self.video_widget.setStyleSheet("""
+            background-color: black; 
+            border-radius: 8px;
+        """)
+        # 移除固定高度，让其自适应
+        video_layout.addWidget(self.video_widget)
+
+        video_frame.setLayout(video_layout)
+        upper_layout.addWidget(video_frame)
+
+        # 设置视频区域和按钮区域的空间比例为 85:15
+        upper_layout.setStretchFactor(video_frame, 85)  # 视频区域占85%
+
+        # 创建媒体播放器并关联视频控件
         self.media_player = QMediaPlayer()
         self.media_player.setVideoOutput(self.video_widget)
 
-        # 添加控制按钮
-        video_control_layout = QHBoxLayout()
+        # 添加控制按钮 - 居中放置在底部
+        button_container = QWidget()
+        button_layout = QHBoxLayout()
+        button_layout.setAlignment(Qt.AlignCenter)  # 居中对齐
+
+        self.upload_button = QPushButton("上传视频")
         self.play_button = QPushButton("播放")
         self.pause_button = QPushButton("暂停")
         self.stop_button = QPushButton("停止")
-        self.upload_button = QPushButton("上传视频")
 
-        # 连接按钮事件
+        # 设置按钮样式
+        button_style = """
+            QPushButton {
+                background-color: white;
+                color: #000000;
+                border: 1px solid #dee2e6;
+                padding: 8px 15px;
+                font-size: 12px;
+                font-weight: bold;
+                border-radius: 8px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #f8f9fa;
+                border-color: #ced4da;
+            }
+            QPushButton:pressed {
+                background-color: #e9ecef;
+                border-color: #adb5bd;
+                padding: 9px 15px 7px 15px;  /* 按下时微调padding营造按下效果 */
+            }
+            QPushButton:checked {
+                background-color: #3a7bd5;
+                color: white;
+                border-color: #2c6ac5;
+            }
+        """
+        self.upload_button.setStyleSheet(button_style)
+        self.play_button.setStyleSheet(button_style)
+        self.pause_button.setStyleSheet(button_style)
+        self.stop_button.setStyleSheet(button_style)
+
+        # 连接按钮事件 - 添加视觉反馈
+        self.upload_button.pressed.connect(self.button_pressed)
+        self.upload_button.released.connect(self.button_released)
+        self.play_button.pressed.connect(self.button_pressed)
+        self.play_button.released.connect(self.button_released)
+        self.pause_button.pressed.connect(self.button_pressed)
+        self.pause_button.released.connect(self.button_released)
+        self.stop_button.pressed.connect(self.button_pressed)
+        self.stop_button.released.connect(self.button_released)
+
         self.upload_button.clicked.connect(self.upload_video)
         self.play_button.clicked.connect(self.play_video)
         self.pause_button.clicked.connect(self.pause_video)
         self.stop_button.clicked.connect(self.stop_video)
+        # 添加按钮到布局
+        button_layout.addWidget(self.upload_button)
+        button_layout.addWidget(self.play_button)
+        button_layout.addWidget(self.pause_button)
+        button_layout.addWidget(self.stop_button)
 
-        video_control_layout.addWidget(self.upload_button)
-        video_control_layout.addWidget(self.play_button)
-        video_control_layout.addWidget(self.pause_button)
-        video_control_layout.addWidget(self.stop_button)
-        video_control_layout.addStretch()
+        button_container.setLayout(button_layout)
 
-        upper_layout.addLayout(video_control_layout)
+        # 将按钮容器添加到主布局
+        upper_layout.addWidget(button_container)
+        # 设置按钮区域占15%
+        upper_layout.setStretchFactor(button_container, 15)  # 按钮区域占15%
 
-        upper_layout.addStretch()
         upper_frame.setLayout(upper_layout)
         central_layout.addWidget(upper_frame)
         # 上方大矩形区域 -- 结束
-
         # 下方水平布局区域 (占50%空间)
         lower_layout = QHBoxLayout()
         lower_layout.setSpacing(10)
@@ -259,6 +339,10 @@ class AgricultureMonitorUI(QMainWindow):
         # 下方右侧矩形 -- 结束
 
         central_layout.addLayout(lower_layout)
+        # 设置上下区域的空间比例为 65:35
+        central_layout.setStretchFactor(upper_frame, 65)  # 上方区域占65%
+        central_layout.setStretchFactor(lower_layout, 35)  # 下方区域占35%
+
         central_frame.setLayout(central_layout)
         content_layout.addWidget(central_frame)
 
@@ -323,17 +407,16 @@ class AgricultureMonitorUI(QMainWindow):
             self,
             "选择视频文件",
             "",
-            "视频文件 (*.mp4 *.avi *.mov *.wmv *.flv)"
+            "视频文件 (*.mp4 *.avi *.mov *.wmv *.flv *.mkv)"
         )
 
         if file_name:
             self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(file_name)))
+            # 自动播放上传的视频
+            self.media_player.play()
 
     def play_video(self):
         """播放视频"""
-        if self.media_player.state() == QMediaPlayer.StoppedState:
-            # 如果是停止状态，重新加载媒体
-            pass
         self.media_player.play()
 
     def pause_video(self):
@@ -343,6 +426,62 @@ class AgricultureMonitorUI(QMainWindow):
     def stop_video(self):
         """停止视频"""
         self.media_player.stop()
+
+    def on_media_state_changed(self, state):
+        """媒体状态改变时更新按钮状态"""
+        if state == QMediaPlayer.PlayingState:
+            self.play_button.setText("播放中")
+            self.play_button.setEnabled(False)
+        else:
+            self.play_button.setText("播放")
+            self.play_button.setEnabled(True)
+
+    def button_pressed(self):
+        """按钮按下时的处理"""
+        sender = self.sender()
+        sender.setStyleSheet("""
+            QPushButton {
+                background-color: #e9ecef;
+                color: #000000;
+                border: 1px solid #adb5bd;
+                padding: 8px 15px;
+                font-size: 12px;
+                font-weight: bold;
+                border-radius: 8px;
+                min-width: 80px;
+            }
+        """)
+
+    def button_released(self):
+        """按钮释放时的处理"""
+        sender = self.sender()
+        button_style = """
+            QPushButton {
+                background-color: white;
+                color: #000000;
+                border: 1px solid #dee2e6;
+                padding: 8px 15px;
+                font-size: 12px;
+                font-weight: bold;
+                border-radius: 8px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #f8f9fa;
+                border-color: #ced4da;
+            }
+            QPushButton:pressed {
+                background-color: #e9ecef;
+                border-color: #adb5bd;
+                padding: 9px 15px 7px 15px;
+            }
+            QPushButton:checked {
+                background-color: #3a7bd5;
+                color: white;
+                border-color: #2c6ac5;
+            }
+        """
+        sender.setStyleSheet(button_style)
 
 
 if __name__ == "__main__":
