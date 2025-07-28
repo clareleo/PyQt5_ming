@@ -1,23 +1,135 @@
-"""
-中间视频播放，但是有点 bug
-"""
-import json
 import sys
-import time
-
+import random
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget, QVBoxLayout,
+                             QHBoxLayout, QLabel, QPushButton, QFrame, QGraphicsDropShadowEffect,
+                             QScrollArea)
+from PyQt5.QtCore import Qt, QTimer, QUrl
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget, QVBoxLayout,
-                             QHBoxLayout, QLabel, QPushButton, QGroupBox,
-                             QComboBox, QFrame, QLCDNumber, QGraphicsDropShadowEffect)
-from PyQt5.QtCore import Qt, QTimer, QUrl
-from PyQt5.QtGui import QFont, QColor, QPalette, QIcon
+from PyQt5.QtGui import QFont, QColor
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import numpy as np
+from datetime import datetime, timedelta
+
+
+class TemperatureHumidityChart(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.initData()
+        self.setupTimer()
+
+    def initUI(self):
+        layout = QVBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+
+        # 创建matplotlib图表
+        self.figure = Figure(figsize=(5, 3), dpi=100)
+        self.canvas = FigureCanvas(self.figure)
+        self.ax1 = self.figure.add_subplot(111)
+
+        # 设置图表样式
+        self.ax1.set_facecolor('#f8f9fa')
+        self.figure.patch.set_facecolor('white')
+        self.ax1.grid(True, alpha=0.3)
+
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+
+    def initData(self):
+        # 初始化数据
+        self.times = []
+        self.temperatures = []
+        self.humidities = []
+
+        # 初始化图表显示
+        self.updateChart()
+
+    def setupTimer(self):
+        # 设置定时器，每3秒更新一次数据
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.updateData)
+        self.timer.start(3000)  # 3秒更新一次
+
+    def updateData(self):
+        # 生成随机温度数据 (25-35度)
+        temperature = random.uniform(25, 35)
+        # 生成随机湿度数据 (40-80%)
+        humidity = random.uniform(40, 80)
+
+        # 记录当前时间
+        current_time = datetime.now()
+
+        # 添加数据到列表
+        self.times.append(current_time)
+        self.temperatures.append(temperature)
+        self.humidities.append(humidity)
+
+        # 只保留最近20个数据点
+        if len(self.times) > 20:
+            self.times.pop(0)
+            self.temperatures.pop(0)
+            self.humidities.pop(0)
+
+        # 更新图表
+        self.updateChart()
+
+    def updateChart(self):
+        # 清空图表
+        self.ax1.clear()
+
+        if len(self.times) > 0:
+            # 设置中文字体支持
+            plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+            plt.rcParams['axes.unicode_minus'] = False
+
+            # 绘制温度曲线
+            self.ax1.plot(self.times, self.temperatures, 'r-', marker='o',
+                          linewidth=2, markersize=4, label='温度 (°C)')
+
+            # 设置图表属性
+            self.ax1.set_title('实时温湿度监控', fontsize=10, pad=10)
+            self.ax1.set_ylabel('温度 (°C)', color='r')
+            self.ax1.tick_params(axis='y', labelcolor='r')
+
+            # 创建第二个Y轴用于湿度
+            ax2 = self.ax1.twinx()
+            ax2.plot(self.times, self.humidities, 'b-', marker='s',
+                     linewidth=2, markersize=4, label='湿度 (%)')
+            ax2.set_ylabel('湿度 (%)', color='b')
+            ax2.tick_params(axis='y', labelcolor='b')
+
+            # 格式化X轴时间显示 - 缩小字体并旋转显示
+            self.figure.autofmt_xdate(rotation=45)
+            self.ax1.tick_params(axis='x', labelsize=8)  # 缩小时间标签字体
+
+            # 设置时间轴间隔，避免标签重叠
+            if len(self.times) > 5:
+                interval = max(1, len(self.times) // 5)  # 最多显示5个时间标签
+                for i, label in enumerate(self.ax1.get_xticklabels()):
+                    if i % interval != 0:
+                        label.set_visible(False)
+
+            # 添加图例
+            self.ax1.legend(loc='upper left', fontsize=8)
+            ax2.legend(loc='upper right', fontsize=8)
+
+            # 设置Y轴范围
+            self.ax1.set_ylim(20, 40)
+            ax2.set_ylim(30, 90)
+
+        # 刷新图表
+        self.canvas.draw()
+
 
 class AgricultureMonitorUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("智慧农业监测系统")
-        self.setGeometry(100, 100, 1200, 800) # 设置大小
+        self.setGeometry(100, 100, 1200, 800)  # 设置大小
         self.setStyleSheet("""
                 QMainWindow {
                     background-color: rgba(0, 28, 100, 100%);  /* 深蓝色 */
@@ -33,8 +145,17 @@ class AgricultureMonitorUI(QMainWindow):
         self.timer.start(1000)
         self.time_label = None  # 保存时间标签引用
 
+        # 初始化温湿度数据存储
+        self.temperature_data = []
+        self.humidity_data = []
+
         # 初始化UI组件
         self.initUI()
+
+        # 启动温湿度数据更新定时器
+        self.data_timer = QTimer(self)
+        self.data_timer.timeout.connect(self.update_temp_humidity_data)
+        self.data_timer.start(3000)  # 每3秒更新一次
 
     def initUI(self):
         # 主布局
@@ -173,7 +294,7 @@ class AgricultureMonitorUI(QMainWindow):
                     border: 1px solid #dee2e6;
                     border-radius: 12px;
                     padding: 8px;
-                    
+
                 """)
         upper_title.setAlignment(Qt.AlignCenter)
         central_layout.addWidget(upper_title)
@@ -306,32 +427,56 @@ class AgricultureMonitorUI(QMainWindow):
         lower_layout.setSpacing(10)
         # 下方水平布局区域 -- 结束
 
-        # 下方左侧矩形
+        # 下方左侧矩形 - 温湿度图表
         left_lower_frame = QFrame()
         left_lower_frame.setStyleSheet("""
                     background-color: white;
                     border: 1px solid #dee2e6;
                     border-radius: 12px;
                 """)
-        # 移除固定高度设置
         left_lower_layout = QVBoxLayout()
         left_lower_layout.setContentsMargins(10, 10, 10, 10)
 
-        left_lower_layout.addStretch()
+        # 创建温湿度图表实例
+        self.temp_humidity_chart = TemperatureHumidityChart()
+        left_lower_layout.addWidget(self.temp_humidity_chart)
+
         left_lower_frame.setLayout(left_lower_layout)
         lower_layout.addWidget(left_lower_frame)
         # 下方左侧矩形 -- 结束
 
-        # 下方右侧矩形
+        # 下方右侧矩形 - 可以添加其他监控数据
         right_lower_frame = QFrame()
         right_lower_frame.setStyleSheet("""
-                    background-color: white;
+                    background-color: rgba(255, 255, 255, 70%);
                     border: 1px solid #dee2e6;
                     border-radius: 12px;
                 """)
-        # 移除固定高度设置
         right_lower_layout = QVBoxLayout()
         right_lower_layout.setContentsMargins(10, 10, 10, 10)
+
+        # 添加标题
+        chart_title = QLabel("其他环境数据")
+        chart_title.setStyleSheet("""
+            font-size: 14px;
+            font-weight: bold;
+            color: #000000;
+            padding: 5px;
+        """)
+        chart_title.setAlignment(Qt.AlignCenter)
+        right_lower_layout.addWidget(chart_title)
+
+        # 添加占位符内容
+        placeholder = QLabel("光照强度: --- lux\n土壤湿度: --- %\nCO₂浓度: --- ppm")
+        placeholder.setStyleSheet("""
+            font-size: 12px;
+            color: #495057;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        """)
+        placeholder.setAlignment(Qt.AlignCenter)
+        right_lower_layout.addWidget(placeholder)
 
         right_lower_layout.addStretch()
         right_lower_frame.setLayout(right_lower_layout)
@@ -346,28 +491,83 @@ class AgricultureMonitorUI(QMainWindow):
         central_frame.setLayout(central_layout)
         content_layout.addWidget(central_frame)
 
-        # 右侧消息列表
+        # 右侧消息列表 (修改为温湿度数据展示区)
         message_frame = QFrame()
         message_frame.setFixedWidth(200)
         message_frame.setStyleSheet("""
-                    background-color: rgba(255, 255, 255, 65%);  /* 65%不透明度的白色 */
+                    background-color: rgba(255, 255, 255, 80%);  /* 80%不透明度的白色 */
                     border: 1px solid #dee2e6;
                     border-radius: 12px;
                 """)
+
         message_layout = QVBoxLayout()
-        message_layout.setContentsMargins(10, 15, 10, 15)
-        message_layout.setSpacing(10)
+        message_layout.setContentsMargins(0, 0, 0, 0)
+        message_layout.setSpacing(0)
+
+        # 添加标题
+        message_title = QLabel("实时温湿度数据")
+        message_title.setStyleSheet("""
+            background-color: white;
+            color: #000000;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 12px 12px 0 0;
+            margin: 5px;  /* 添加外边距 */
+        """)
+        message_title.setAlignment(Qt.AlignCenter)
+        message_layout.addWidget(message_title)
+
+        # 创建滚动区域用于显示温湿度数据
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: rgba(255, 255, 255, 70%);
+                margin: 5px;  /* 添加外边距 */
+            }
+            QScrollBar:vertical {
+                background: rgba(255, 255, 255, 50%);
+                width: 10px;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(58, 123, 213, 80%);
+                border-radius: 5px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(58, 123, 213, 100%);
+            }
+        """)
+
+        # 创建数据容器
+        self.data_container = QWidget()
+        self.data_container.setStyleSheet("background-color: transparent;")
+        self.data_layout = QVBoxLayout()
+        self.data_layout.setContentsMargins(10, 10, 10, 10)  # 保持现有的内边距
+        self.data_layout.setSpacing(10)  # 增加控件间距到10px
+        self.data_layout.addStretch()
+        self.data_container.setLayout(self.data_layout)
+
+        self.scroll_area.setWidget(self.data_container)
+        message_layout.addWidget(self.scroll_area)
+
+        message_frame.setLayout(message_layout)
         # 右侧消息列表 -- 结束
 
         # 将消息列表添加到内容布局的右侧
         content_layout.addWidget(message_frame)
 
-
         main_layout.addLayout(content_layout)
 
         # 底部状态栏
         status_bar = QLabel("© 2025 智慧农业监测系统 | 版本 1.0.0")
-        status_bar.setFont(QFont("Microsoft YaHei", 10))
+        status_bar.setFont(QFont("PingFang SC", 10))
         status_bar.setStyleSheet("""
             background-color: rgba(255, 255, 255, 65%);
             border: 1px solid #dee2e6;
@@ -379,21 +579,21 @@ class AgricultureMonitorUI(QMainWindow):
         status_bar.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(status_bar)
 
-
-
         self.main_widget.setLayout(main_layout)
 
     """居中显示的函数，以防万一"""
+
     def center(self):
         # 获取屏幕尺寸
         screen = QApplication.primaryScreen().geometry()
-        window_size = self.geometry() # 获取窗口尺寸
+        window_size = self.geometry()  # 获取窗口尺寸
         # 计算居中位置
         x = (screen.width() - window_size.width()) // 2
         y = (screen.height() - window_size.height()) // 2
-        self.move(x, y) # 移动窗口到居中位置
+        self.move(x, y)  # 移动窗口到居中位置
 
     """更新时间的方法"""
+
     def update_time(self):
         from datetime import datetime
         current_time = datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
@@ -483,9 +683,61 @@ class AgricultureMonitorUI(QMainWindow):
         """
         sender.setStyleSheet(button_style)
 
+    def update_temp_humidity_data(self):
+        """更新右侧温湿度数据显示"""
+        # 生成随机温湿度数据
+        temperature = random.uniform(25, 35)
+        humidity = random.uniform(40, 80)
+
+        # 记录当前时间
+        current_time = datetime.now().strftime("%H:%M:%S")
+
+        # 添加到数据列表
+        self.temperature_data.append((current_time, temperature))
+        self.humidity_data.append((current_time, humidity))
+
+        # 只保留最近20条数据
+        if len(self.temperature_data) > 20:
+            self.temperature_data.pop(0)
+            self.humidity_data.pop(0)
+
+        # 更新显示
+        self.update_data_display()
+
+    def update_data_display(self):
+        """更新数据展示区域"""
+        # 清除现有数据项（除了最后的弹簧）
+        while self.data_layout.count() > 1:  # 保留最后的弹簧
+            item = self.data_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        # 逆序添加数据（最新的在上面）
+        for i in range(len(self.temperature_data) - 1, -1, -1):
+            time_temp, temp = self.temperature_data[i]
+            time_hum, hum = self.humidity_data[i]
+
+            # 创建数据项
+            data_item = QLabel(f"时间: {time_temp}\n温度: {temp:.1f}°C\n湿度: {hum:.1f}%")
+            data_item.setStyleSheet("""
+                background-color: #f8f9fa;
+                color: #000000;
+                border: 1px solid #dee2e6;
+                padding: 8px;
+                border-radius: 8px;
+                font-size: 11px;
+                font-weight: normal;
+            """)
+            data_item.setAlignment(Qt.AlignLeft)
+
+            self.data_layout.insertWidget(0, data_item)  # 插入到最前面
+
+        # 添加弹簧以保持布局
+        self.data_layout.addStretch()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = AgricultureMonitorUI()
-    window.show()
-    sys.exit(app.exec())
+    window.showFullScreen()  # 全屏显示
+    sys.exit(app.exec_())
